@@ -2,33 +2,27 @@
 #-------------------------------------------------------------------------------
 # .bash_aliases
 #-------------------------------------------------------------------------------
-# OS specific aliases
-case $(uname -s) in
-	Linux)
-	alias ls='ls -hCF --color --group-directories-first'
-	alias update='sudo apt-get update'
-	alias upgrade='sudo apt-get upgrade -y';;
-
-	FreeBSD)
-	alias ls='ls -hCF --color'
-	alias update='sudo pkg update'
-	alias upgrade='sudo pkg upgrade -y';;
-	*);;
-esac
-
 # Add ls aliases
-alias la='ls -a'
-alias ll='ls -la'
+alias ls='ls -CF --color'
+alias la='ls -A'
+alias ll='ls -hlF'
 alias lr='ls -R'
-alias llr="ll -R"
+alias lla='ls -lAF'
+alias llr='ll -R'
 alias l.='ls -d .*'
 
 # Enable color
-alias dir='dir --color=auto'
-alias vdir='vdir --color=auto'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
+alias dir='dir --color'
+alias vdir='vdir --color'
+alias grep='grep --color'
+alias fgrep='fgrep --color'
+alias egrep='egrep --color'
+alias diff='diff --color'
+
+# Prefer colordiff if possible
+if [ $(command -v colordiff) ]; then
+	alias diff='colordiff'
+fi
 
 # Editor aliases
 alias edit="$EDITOR"

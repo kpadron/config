@@ -18,6 +18,7 @@ swap()
 
 
 # Handy Extract Program
+alias extract='ex'
 extract()
 {
 	if [ -f $1 ] ; then
@@ -177,4 +178,20 @@ corename()
 	for file in "$@"; do
 		echo -n $file : ; gdb --core=$file --batch | head -1
 	done
+}
+
+
+# Diff files side by side
+alias sdiff='splitdiff'
+splitdiff()
+{
+	diff -y -s --width="$COLUMNS" "$1" "$2"
+}
+
+
+# Diff binary files
+alias bdiff='bindiff'
+bindiff()
+{
+	splitdiff <(xxd "$1") <(xxd "$2")
 }

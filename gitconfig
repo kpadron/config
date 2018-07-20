@@ -1,3 +1,11 @@
 [user]
 	email = kpadron.github@gmail.com
 	name = Kristian Padron
+[color]
+	status = auto
+	branch = auto
+	ui = true
+[push]
+	default = simple
+[merge]
+	conflictstyle = diff3

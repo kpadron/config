@@ -8,9 +8,8 @@ case $- in
 	  *) return;;
 esac
 
-
 # Source global definitions
-[ -f /etc/bashrc ] && . /etc/bashrc
+[ -r /etc/bashrc ] && . /etc/bashrc
 
 
 #-------------------------------------------------------------------------------
@@ -106,7 +105,7 @@ HOSTFILE="~/.hosts"
 # COLOR SETTINGS
 #-------------------------------------------------------------------------------
 # Enable color support
-if [ -x "$(command -v dircolors)" ]; then
+if [ "$(command -v dircolors)" ]; then
 	[ -r "${HOME}/.dircolors" ] && eval "$(dircolors -b ${HOME}/.dircolors)" || eval "$(dircolors -b)"
 fi
 
@@ -275,7 +274,6 @@ job_color()
 # Returns a color according to git repository status
 git_branch()
 {
-	# git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
 	local BRANCH=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
 
 	if [ ! "${BRANCH}" == "" ]; then
