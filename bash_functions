@@ -185,7 +185,7 @@ corename()
 alias sdiff='splitdiff'
 splitdiff()
 {
-	diff -y -s --width="$COLUMNS" "$1" "$2"
+	diff -y -t --width="$COLUMNS" "$@"
 }
 
 
@@ -193,5 +193,8 @@ splitdiff()
 alias bdiff='bindiff'
 bindiff()
 {
-	splitdiff <(xxd "$1") <(xxd "$2")
+	left="$1"
+	right="$2"
+	shift 2
+	splitdiff <(xxd "$left") <(xxd "$right") "$@"
 }
