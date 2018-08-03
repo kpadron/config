@@ -54,7 +54,6 @@ export VISUAL="$EDITOR"
 
 # Default pager, prefer less
 if [ "$(command -v less)" ]; then
-	echo ".bashrc: most not installed using less"
 	export PAGER=less
 else
 	echo ".bashrc: less not installed using more"
@@ -64,7 +63,7 @@ fi
 # Setup less variables if necessary
 if [ "$PAGER" == "less" ]; then
 	# Options
-	export LESS="-F -i -R -x4"
+	export LESS="-F -J -K -i -R -x4"
 
 	# Colors
 	export LESS_TERMCAP_mb=$'\E[01;31m'
