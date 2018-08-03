@@ -52,10 +52,8 @@ else
 fi
 export VISUAL="$EDITOR"
 
-# Default pager, prefer most
-if [ "$(command -v most)" ]; then
-	export PAGER=most
-elif [ "$(command -v less)" ]; then
+# Default pager, prefer less
+if [ "$(command -v less)" ]; then
 	echo ".bashrc: most not installed using less"
 	export PAGER=less
 else
