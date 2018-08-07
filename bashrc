@@ -63,7 +63,7 @@ fi
 # Setup less variables if necessary
 if [ "$PAGER" == "less" ]; then
 	# Options
-	export LESS="-F -J -M -K -i -R -x4"
+	export LESS="-F -J -S -M -K -i -R -x4"
 
 	# Colors
 	export LESS_TERMCAP_mb=$'\E[01;31m'
