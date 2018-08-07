@@ -30,6 +30,10 @@ alias e='edit'
 alias sb='. ~/.bashrc'
 alias eb='e ~/.bashrc'
 
+# Git aliases
+alias gits='git status'
+alias gita='git add'
+
 # File operation aliases
 alias mkdir='mkdir -p'
 alias md='mkdir'

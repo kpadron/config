@@ -63,7 +63,7 @@ fi
 # Setup less variables if necessary
 if [ "$PAGER" == "less" ]; then
 	# Options
-	export LESS="-F -J -K -i -R -x4"
+	export LESS="-F -J -M -K -i -R -x4"
 
 	# Colors
 	export LESS_TERMCAP_mb=$'\E[01;31m'
@@ -90,6 +90,7 @@ HISTFILE="${HOME}/.bash_history"
 HISTSIZE=5000
 HISTFILESIZE=10000
 HISTCONTROL=ignorespace:erasedups
+PROMPT_COMMAND="history -a"
 
 # Time format to use whenever keyword time is used
 TIMEFORMAT=$'\nreal %3R\tuser %3U\tsys %3S\tpcpu %P\n'
@@ -172,7 +173,8 @@ trap _exit EXIT
 #    Red       == unsecured remote connection
 #
 # PWD:
-#    Green     == more than 10% free disk space
+#    Green     == more than 30% free disk space
+#    Yellow    == less than 30% free disk space
 #    Orange    == less than 10% free disk space
 #    ALERT     == less than 5% free disk space
 #    Red       == current user does not have write privileges
@@ -183,41 +185,33 @@ trap _exit EXIT
 #    Cyan      == at least one background job in this shell
 #    Orange    == at least one suspended job in this shell
 
-# Returns a color indication remote connection type.
-connection_color()
-{
-	# Connected with ssh, unsecure remote, or local
-	if [ -n "${SSH_CONNECTION}" ]; then
-		echo -en ${Green}
-	elif [[ "${DISPLAY%%:0*}" != "" ]]; then
-		echo -en ${ALERT}
-	else
-		echo -en ${BCyan}
-	fi
-}
+# Connected with ssh, unsecure remote, or local
+if [ -n "${SSH_CONNECTION}" ]; then
+	CNX_COLOR=${Green}
+elif [[ "${DISPLAY%%:0*}" != "" ]]; then
+	CNX_COLOR=${ALERT}
+else
+	CNX_COLOR=${BCyan}
+fi
 
-# Returns a color indicating user type.
-user_color()
-{
-	# User is root, not login user, or normal
-	if [[ ${USER} == "root" ]]; then
-		echo -en ${Red}
-	elif [[ ${USER} != $LOGNAME ]]; then
-		echo -en ${BRed}
-	else
-		echo -en ${BCyan}
-	fi
-}
+# User is root, not login user, or normal
+if [[ ${USER} == "root" ]]; then
+	USR_COLOR=${Red}
+elif [[ ${USER} != $LOGNAME ]]; then
+	USR_COLOR=${BRed}
+else
+	USR_COLOR=${BCyan}
+fi
+
+# Detemine load thresholds
+NCPU=$(grep -cs 'processor' /proc/cpuinfo || sysctl -n hw.ncpu)
+SLOAD=$((100*${NCPU})) # Small load
+MLOAD=$((200*${NCPU})) # Medium load
+XLOAD=$((400*${NCPU})) # Xlarge load
 
 # Returns a color indicating system load.
 load_color()
 {
-	# Detemine load thresholds
-	local NCPU=$(grep -cs 'processor' /proc/cpuinfo || sysctl -n hw.ncpu)
-	local SLOAD=$(( 100*${NCPU} )) # Small load
-	local MLOAD=$(( 200*${NCPU} )) # Medium load
-	local XLOAD=$(( 400*${NCPU} )) # Xlarge load
-
 	# System load of the current host.
 	local SYSLOAD=$(uptime)
 	SYSLOAD=${SYSLOAD##*: }
@@ -244,12 +238,14 @@ disk_color()
 	if [ ! -w "${PWD}" ]; then
 		echo -en ${Red}
 	elif [ -s "${PWD}" ]; then
-		local used=$(command df -P "$PWD" | awk 'END {print $5} {sub(/%/,"")}')
+		USED=$(command df -P "$PWD" | awk 'END {print $5} {sub(/%/,"")}')
 
-		if [ ${used} -gt 95 ]; then
+		if [ ${USED} -gt 95 ]; then
 			echo -en ${ALERT}
-		elif [ ${used} -gt 90 ]; then
+		elif [ ${USED} -gt 90 ]; then
 			echo -en ${BRed}
+		elif [ ${USED} -gt 70 ]; then
+			echo -en ${Yellow}
 		else
 			echo -en ${Green}
 		fi
@@ -268,34 +264,99 @@ job_color()
 	fi
 }
 
-# Returns a color according to git repository status
-git_branch()
+# Return git repository status
+git_dirty_parse()
 {
-	local BRANCH=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+	local status=$(git status 2>&1 | tee)
+	local dirty=$(echo -n "${status}" 2> /dev/null | grep "modified:" &> /dev/null; echo "$?")
+	local untracked=$(echo -n "${status}" 2> /dev/null | grep "Untracked files" &> /dev/null; echo "$?")
+	local ahead=$(echo -n "${status}" 2> /dev/null | grep "Your branch is ahead of" &> /dev/null; echo "$?")
+	local newfile=$(echo -n "${status}" 2> /dev/null | grep "new file:" &> /dev/null; echo "$?")
+	local renamed=$(echo -n "${status}" 2> /dev/null | grep "renamed:" &> /dev/null; echo "$?")
+	local deleted=$(echo -n "${status}" 2> /dev/null | grep "deleted:" &> /dev/null; echo "$?")
+	local bits=''
 
-	if [ ! "${BRANCH}" == "" ]; then
-		echo " (${BRANCH})"
+	if [ "${renamed}" == "0" ]; then
+		bits=">${bits}"
+	fi
+
+	if [ "${ahead}" == "0" ]; then
+		bits="*${bits}"
+	fi
+
+	if [ "${newfile}" == "0" ]; then
+		bits="+${bits}"
+	fi
+
+	if [ "${untracked}" == "0" ]; then
+		bits="?${bits}"
+	fi
+
+	if [ "${deleted}" == "0" ]; then
+		bits="x${bits}"
+	fi
+
+	if [ "${dirty}" == "0" ]; then
+		bits="!${bits}"
+	fi
+
+	if [ "${bits}" != "" ]; then
+		echo " ${bits}"
 	else
 		echo ""
 	fi
 }
 
+# Returns a color according to git repository status
+git_branch()
+{
+	local BRANCH=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+
+	if [ "${BRANCH}" != "" ]; then
+		local STAT=$(git_dirty_parse)
+		echo " (${BRANCH}${STAT})"
+	else
+		echo ""
+	fi
+}
+
+# Returns a color according to return status of last command
+return_color()
+{
+	if [ "$?" != "0" ]; then
+		echo -en ${BRed}
+	else
+		echo -en ${NC}
+	fi
+}
+
+create_ps1()
+{
+	RET_COLOR=$(return_color)
+
+	# Time of day (with load info):
+	PS1="[\[\$(load_color)\]\@\[${NC}\] "
+
+	# User@Host (with connection type info):
+	PS1+="\[${USR_COLOR}\]\u\[${NC}\]@\[${CNX_COLOR}\]\h\[${NC}\]:"
+
+	# PWD (with 'disk space' info):
+	PS1+="\[\$(disk_color)\]\W\[${NC}\]"
+
+	# Job status and Git info:
+	PS1+="\[\$(job_color)\]\$(git_branch)\[${NC}\]"
+
+	# Prompt
+	PS1+="]\[${RET_COLOR}\]\$\[${NC}\] "
+
+	# Set title of current xterm:
+	PS1+="\[\e]0;[\u@\h] \w\a\]"
+}
 
 # Now we construct the prompt.
 case ${TERM} in
 	*term* | rxvt | linux)
-		# Time of day (with load info):
-		PS1="[\[\$(load_color)\]\@\[${NC}\] "
-		# User@Host (with connection type info):
-		PS1=${PS1}"\[\$(user_color)\]\u\[${NC}\]@\[\$(connection_color)\]\h\[${NC}\]:"
-		# PWD (with 'disk space' info):
-		PS1=${PS1}"\[\$(disk_color)\]\W\[${NC}\]"
-		# Job status and Git info:
-		PS1=${PS1}"\[\$(job_color)\]\$(git_branch)\[${NC}\]"
-		# Prompt
-		PS1=${PS1}"]\$\[${NC}\] "
-		# Set title of current xterm:
-		PS1=${PS1}"\[\e]0;[\u@\h] \w\a\]";;
+		PROMPT_COMMAND="create_ps1; ${PROMPT_COMMAND}";;
 	*)
 		# PS1="(\A \u@\h \w) $ "
 		PS1="\A \u@\h:\W\$ ";;
