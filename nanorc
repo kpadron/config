@@ -17,7 +17,7 @@
 
 ## When soft line wrapping is enabled, make it wrap lines at blanks
 ## (tabs and spaces) instead of always at the edge of the screen.
-set atblanks
+# set atblanks
 
 ## Use auto-indentation.
 set autoindent
@@ -200,7 +200,7 @@ set whitespace ">."
 ## These are examples; by default there are no colors.
 set titlecolor brightwhite,blue
 set statuscolor brightwhite,blue
-set selectedcolor brightwhite,cyan
+# set selectedcolor brightwhite,cyan
 set numbercolor brightwhite
 set keycolor brightwhite
 set functioncolor blue
