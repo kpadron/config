@@ -97,7 +97,7 @@ set morespace
 # set nonewlines
 
 ## Don't wrap text at all.
-# set nowrap
+set nowrap
 
 ## Set operating directory.  nano will not read or write files outside
 ## this directory and its subdirectories.  Also, the current directory
@@ -154,7 +154,7 @@ set positionlog
 set smooth
 
 ## Enable soft line wrapping (AKA full-line display).
-set softwrap
+# set softwrap
 
 ## Use this spelling checker instead of the internal one.  This option
 ## does not have a default value.
