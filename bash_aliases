@@ -51,6 +51,9 @@ alias j='jobs -l'
 alias cl='clear'
 alias quit='exit'
 
+# Network aliases
+alias socks='sudo netstat -tuap'
+
 # Path aliases
 alias path='echo -e ${PATH//:/\\n}'
 alias libpath='echo -e ${LD_LIBRARY_PATH//:/\\n}'
