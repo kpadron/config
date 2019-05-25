@@ -347,7 +347,7 @@ create_ps1()
 	PS1+="\[\$(job_color)\]\$(git_branch)\[${NC}\]"
 
 	# Prompt
-	PS1+="]\[${RET_COLOR}\]\$\[${NC}\] "
+	PS1+="]\[${RET_COLOR}\]\\$\[${NC}\] "
 
 	# Set title of current xterm:
 	PS1+="\[\e]0;[\u@\h] \w\a\]"
