@@ -6,3 +6,8 @@ for file in $file_list; do
 		cp -i "$file" "${HOME}/.$file"
 	fi
 done
+
+if ! diff -N -q "htoprc" "${HOME}/.config/htop/htoprc"; then
+	mkdir -p "${HOME}/.config/htop"
+	cp -i "htoprc" "${HOME}/.config/htop/htoprc"
+fi
