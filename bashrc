@@ -1,12 +1,9 @@
-#!usr/bin/env bash
+#!/usr/bin/env bash
 #-------------------------------------------------------------------------------
 # .bashrc
 #-------------------------------------------------------------------------------
 # If not running interactively, don't do anything
-case $- in
-	*i*) ;;
-	  *) return;;
-esac
+[ -z "$PS1" ] && return
 
 # Source global definitions
 [ -r /etc/bashrc ] && . /etc/bashrc
@@ -44,16 +41,19 @@ shopt -s hostcomplete
 # DEFAULT APPS
 #-------------------------------------------------------------------------------
 # Default editor, prefer nano
-if [ "$(command -v nano)" ]; then
+if [ -n "$(type nano)" ]; then
 	export EDITOR=nano
-else
+elif [ -n "$(type vim)" ]; then
 	echo ".bashrc: nano not installed using vim"
 	export EDITOR=vim
+else
+	echo ".bashrc: vim not installed using vi"
+	export EDITOR=vi
 fi
 export VISUAL="$EDITOR"
 
 # Default pager, prefer less
-if [ "$(command -v less)" ]; then
+if [ -n "$(type less)" ]; then
 	export PAGER=less
 else
 	echo ".bashrc: less not installed using more"
@@ -63,7 +63,7 @@ fi
 # Setup less variables if necessary
 if [ "$PAGER" == "less" ]; then
 	# Options
-	export LESS="-F -X -J -S -M -K -i -R -x4"
+	export LESS="-F -X -S -M -i -R -x4"
 
 	# Colors
 	export LESS_TERMCAP_mb=$'\E[01;31m'
@@ -85,26 +85,22 @@ alias most="$PAGER"
 # HISTORY & OTHER SETTINGS
 #-------------------------------------------------------------------------------
 # Append to history and erase duplicate commands
-shopt -s histappend histreedit histverify cmdhist
+shopt -s cmdhist histappend histreedit histverify
 HISTFILE="${HOME}/.bash_history"
 HISTSIZE=5000
 HISTFILESIZE=10000
-HISTCONTROL=ignorespace:erasedups
-PROMPT_COMMAND="history -a"
+HISTCONTROL=ignoreboth
 
 # Time format to use whenever keyword time is used
 TIMEFORMAT=$'\nreal %3R\tuser %3U\tsys %3S\tpcpu %P\n'
-
-# File to read for hostname completion
-HOSTFILE="~/.hosts"
 
 
 #-------------------------------------------------------------------------------
 # COLOR SETTINGS
 #-------------------------------------------------------------------------------
 # Enable color support
-if [ "$(command -v dircolors)" ]; then
-	[ -r "${HOME}/.dircolors" ] && eval "$(dircolors -b ${HOME}/.dircolors)" || eval "$(dircolors -b)"
+if [ -x "$(type -p dircolors)" ]; then
+	[ -r "${HOME}/.dircolors" ] && eval $(dircolors -b "${HOME}/.dircolors") || eval $(dircolors -b)
 fi
 
 # Normal Colors
@@ -156,6 +152,11 @@ trap _exit EXIT
 #-------------------------------------------------------------------------------
 # Current Format: [TIME USER@HOST PWD (GIT)]$
 #
+# []:
+#    White     == no jobs in this shell
+#    Cyan      == background jobs in this shell
+#    Orange    == suspended jobs in this shell
+#
 # TIME:
 #    Green     == machine load is low
 #    Orange    == machine load is medium
@@ -181,176 +182,133 @@ trap _exit EXIT
 #    Cyan      == current filesystem is size zero (like /proc)
 #
 # $:
-#    White     == no background or suspended jobs in this shell
-#    Cyan      == at least one background job in this shell
-#    Orange    == at least one suspended job in this shell
+#    White     == last command return status was success (zero)
+#    Red       == last command return status was failure (non-zero)
 
 # Connected with ssh, unsecure remote, or local
-if [ -n "${SSH_CONNECTION}" ]; then
+if [ -n "$SSH_CONNECTION" ]; then
 	CNX_COLOR=${Green}
-elif [[ "${DISPLAY%%:0*}" != "" ]]; then
+elif [ -n "${DISPLAY%%:0*}" ]; then
 	CNX_COLOR=${ALERT}
 else
 	CNX_COLOR=${BCyan}
 fi
 
 # User is root, not login user, or normal
-if [[ ${USER} == "root" ]]; then
+if [ "$USER" == "root" ]; then
 	USR_COLOR=${Red}
-elif [[ ${USER} != $LOGNAME ]]; then
+elif [ "$USER" != "$LOGNAME" ]; then
 	USR_COLOR=${BRed}
 else
 	USR_COLOR=${BCyan}
 fi
 
 # Detemine load thresholds
-NCPU=$(grep -cs 'processor' /proc/cpuinfo || sysctl -n hw.ncpu)
-SLOAD=$((100*${NCPU})) # Small load
-MLOAD=$((200*${NCPU})) # Medium load
-XLOAD=$((400*${NCPU})) # Xlarge load
+NCPU=$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN)
+let "SLOAD = 100 * NCPU" # Small load
+let "MLOAD = 200 * NCPU" # Medium load
+let "XLOAD = 400 * NCPU" # Extreme load
 
-# Returns a color indicating system load.
-load_color()
+# Return git repository status
+git_status()
 {
-	# System load of the current host.
+	git status --porcelain --branch 2>/dev/null | (
+		unset branch dirty deleted untracked newfile copied renamed bits status
+		local branch dirty deleted untracked newfile copied renamed bits status
+		while read line ; do
+			case "${line//[:space:]]/}" in
+				'##'*) branch="$(echo "${line:3}" | awk -F '[.][.][.]' '{print $1}')" ; ;;
+				@('M'|'UU')*) dirty='!' ; ;;
+				'D'*) deleted='x' ; ;;
+				'??'*) untracked='?' ; ;;
+				'A'*) newfile='+' ; ;;
+				'C'*) copied='|' ; ;;
+				'R'*) renamed='>' ; ;;
+			esac
+		done
+
+		bits="${dirty}${deleted}${untracked}${newfile}${copied}${renamed}"
+		[ -n "$bits" ] && status="${branch} ${bits}" || status="${branch}"
+		[ -n "$status" ] && echo " ($status)" || echo
+	)
+}
+
+create_ps1()
+{
+	# Determine if the last command was successful
+	if [ "$?" != "0" ]; then
+		local RETURN_STATUS_COLOR=${BRed}
+	else
+		local RETURN_STATUS_COLOR=${NC}
+	fi
+
+	# Determine the current system load
 	local SYSLOAD=$(uptime)
 	SYSLOAD=${SYSLOAD##*: }
 	SYSLOAD=${SYSLOAD%%,*}
 	SYSLOAD=${SYSLOAD//.}
 	SYSLOAD=$((10#$SYSLOAD))
 
-	# Small, medium or large system load
-	if [ ${SYSLOAD} -gt ${XLOAD} ]; then
-		echo -en ${ALERT}
-	elif [ ${SYSLOAD} -gt ${MLOAD} ]; then
-		echo -en ${Red}
-	elif [ ${SYSLOAD} -gt ${SLOAD} ]; then
-		echo -en ${BRed}
+	# Small, medium or extreme system load
+	local SYSTEM_LOAD_COLOR
+	if (("$SYSLOAD" > "$XLOAD")); then
+		SYSTEM_LOAD_COLOR=${ALERT}
+	elif (("$SYSLOAD" > "$MLOAD")); then
+		SYSTEM_LOAD_COLOR=${Red}
+	elif (("$SYSLOAD" >  "$SLOAD")); then
+		SYSTEM_LOAD_COLOR=${BRed}
 	else
-		echo -en ${Green}
+		SYSTEM_LOAD_COLOR=${Green}
 	fi
-}
 
-# Returns a color according to free disk space in $PWD.
-disk_color()
-{
-	# Readonly, disk space, or special directory
-	if [ ! -w "${PWD}" ]; then
-		echo -en ${Red}
-	elif [ -s "${PWD}" ]; then
-		USED=$(command df -P "$PWD" | awk 'END {print $5} {sub(/%/,"")}')
+	# Determine read-only, disk space, or special directory
+	local DISK_USAGE_COLOR
+	if [ ! -w "$PWD" ]; then
+		DISK_USAGE_COLOR=${Red}
+	elif [ -s "$PWD" ]; then
+		local DISK_USAGE=$(df --output=pcent "$PWD")
+		DISK_USAGE=${DISK_USAGE//[!0-9]/}
 
-		if [ ${USED} -gt 95 ]; then
-			echo -en ${ALERT}
-		elif [ ${USED} -gt 90 ]; then
-			echo -en ${BRed}
-		elif [ ${USED} -gt 70 ]; then
-			echo -en ${Yellow}
+		if (("$DISK_USAGE" > 95)); then
+			DISK_USAGE_COLOR=${ALERT}
+		elif (("$DISK_USAGE" > 90)); then
+			DISK_USAGE_COLOR=${BRed}
+		elif (("$DISK_USAGE" > 70)); then
+			DISK_USAGE_COLOR=${Yellow}
 		else
-			echo -en ${Green}
+			DISK_USAGE_COLOR=${Green}
 		fi
 	else
-		echo -en ${Cyan}
-	fi
-}
-
-# Returns a color according to running/suspended jobs.
-job_color()
-{
-	if [ $(jobs -s | wc -l) -gt "0" ]; then
-		echo -en ${BRed}
-	elif [ $(jobs -r | wc -l) -gt "0" ]; then
-		echo -en ${BCyan}
-	fi
-}
-
-# Return git repository status
-git_dirty_parse()
-{
-	local status=$(git status 2>&1 | tee)
-	local dirty=$(echo -n "${status}" 2> /dev/null | grep "modified:" &> /dev/null; echo "$?")
-	local untracked=$(echo -n "${status}" 2> /dev/null | grep "Untracked files" &> /dev/null; echo "$?")
-	local ahead=$(echo -n "${status}" 2> /dev/null | grep "Your branch is ahead of" &> /dev/null; echo "$?")
-	local newfile=$(echo -n "${status}" 2> /dev/null | grep "new file:" &> /dev/null; echo "$?")
-	local renamed=$(echo -n "${status}" 2> /dev/null | grep "renamed:" &> /dev/null; echo "$?")
-	local deleted=$(echo -n "${status}" 2> /dev/null | grep "deleted:" &> /dev/null; echo "$?")
-	local bits=''
-
-	if [ "${renamed}" == "0" ]; then
-		bits=">${bits}"
+		DISK_USAGE_COLOR=${Cyan}
 	fi
 
-	if [ "${ahead}" == "0" ]; then
-		bits="*${bits}"
-	fi
-
-	if [ "${newfile}" == "0" ]; then
-		bits="+${bits}"
-	fi
-
-	if [ "${untracked}" == "0" ]; then
-		bits="?${bits}"
-	fi
-
-	if [ "${deleted}" == "0" ]; then
-		bits="x${bits}"
-	fi
-
-	if [ "${dirty}" == "0" ]; then
-		bits="!${bits}"
-	fi
-
-	if [ "${bits}" != "" ]; then
-		echo " ${bits}"
+	# Determine job status
+	local JOB_STATUS_COLOR
+	if [ -n "$(jobs -s)" ]; then
+		JOB_STATUS_COLOR=${BRed}
+	elif [ -n "$(jobs -r)" ]; then
+		JOB_STATUS_COLOR=${BCyan}
 	else
-		echo ""
+		JOB_STATUS_COLOR=${NC}
 	fi
-}
 
-# Returns a color according to git repository status
-git_branch()
-{
-	local BRANCH=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
-
-	if [ "${BRANCH}" != "" ]; then
-		local STAT=$(git_dirty_parse)
-		echo " (${BRANCH}${STAT})"
-	else
-		echo ""
-	fi
-}
-
-# Returns a color according to return status of last command
-return_color()
-{
-	if [ "$?" != "0" ]; then
-		echo -en ${BRed}
-	else
-		echo -en ${NC}
-	fi
-}
-
-create_ps1()
-{
-	RET_COLOR=$(return_color)
+	# Determine git status
+	local GIT_STATUS_STR=$(git_status)
 
 	# Time of day (with load info):
-	PS1="[\[\$(load_color)\]\@\[${NC}\] "
+	PS1="\[${JOB_STATUS_COLOR}\][\[${SYSTEM_LOAD_COLOR}\]\@\[${NC}\] "
 
-	# User@Host (with connection type info):
+	# User@Host (with connection info):
 	PS1+="\[${USR_COLOR}\]\u\[${NC}\]@\[${CNX_COLOR}\]\h\[${NC}\]:"
 
-	# PWD (with 'disk space' info):
-	PS1+="\[\$(disk_color)\]\W\[${NC}\]"
+	# PWD (with disk space info):
+	PS1+="\[${DISK_USAGE_COLOR}\]\W\[${NC}\]"
 
-	# Job status and Git info:
-	PS1+="\[\$(job_color)\]\$(git_branch)\[${NC}\]"
+	# Git info:
+	PS1+="${GIT_STATUS_STR}\[${NC}\]"
 
 	# Prompt
-	PS1+="]\[${RET_COLOR}\]\\$\[${NC}\] "
-
-	# Set title of current xterm:
-	PS1+="\[\e]0;[\u@\h] \w\a\]"
+	PS1+="\[${JOB_STATUS_COLOR}\]]\[${RETURN_STATUS_COLOR}\]\\$\[${NC}\] "
 }
 
 # Now we construct the prompt.
