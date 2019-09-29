@@ -20,7 +20,7 @@ alias egrep='egrep --color=always'
 alias diff='diff --color=always'
 
 # Prefer colordiff if possible
-if [ -n "$(type colordiff)" ]; then
+if [ -n "$(type -p colordiff)" ]; then
 	alias diff='colordiff'
 fi
 

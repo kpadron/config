@@ -51,7 +51,7 @@ cpv()
 	local FACES=("(o_o)" "(o_-)" "(-_o)" "(-_-)" "¯\_(O_o)_/¯")
 
 	# ensure pv is installed and correct arguments
-	[ -n "$(type pv)" ] || { echo "install pv first"; return 1; }
+	[ -n "$(type -p pv)" ] || { echo "install pv first"; return 1; }
 	[ $# -lt 2 ] && { echo "too few args"; return 1; }
 	[ "$SRC" == "$DST" ] && { echo "src and dst must be different"; return 1; }
 

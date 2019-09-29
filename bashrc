@@ -41,9 +41,9 @@ shopt -s hostcomplete
 # DEFAULT APPS
 #-------------------------------------------------------------------------------
 # Default editor, prefer nano
-if [ -n "$(type nano)" ]; then
+if [ -n "$(type -p nano)" ]; then
 	export EDITOR=nano
-elif [ -n "$(type vim)" ]; then
+elif [ -n "$(type -p vim)" ]; then
 	echo ".bashrc: nano not installed using vim"
 	export EDITOR=vim
 else
@@ -53,7 +53,7 @@ fi
 export VISUAL="$EDITOR"
 
 # Default pager, prefer less
-if [ -n "$(type less)" ]; then
+if [ -n "$(type -p less)" ]; then
 	export PAGER=less
 else
 	echo ".bashrc: less not installed using more"
