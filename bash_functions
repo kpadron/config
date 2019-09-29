@@ -5,11 +5,11 @@
 # Handy Swap Program (possibly dangerous)
 swap()
 {
-	local TMPFILE=tmp.$$
+	local TMPFILE="tmp.$$"
 
 	[ $# -ne 2 ] && echo "swap: 2 arguments needed" && return 1
-	[ ! -e $1 ] && echo "swap: $1 does not exist" && return 1
-	[ ! -e $2 ] && echo "swap: $2 does not exit" && return 1
+	[ ! -e "$1" ] && echo "swap: ${1} does not exist" && return 1
+	[ ! -e "$2" ] && echo "swap: ${2} does not exit" && return 1
 
 	mv "$1" "$TMPFILE"
 	mv "$2" "$1"
@@ -21,21 +21,21 @@ swap()
 alias extract='ex'
 extract()
 {
-	if [ -f $1 ] ; then
-		case $1 in
-			*.tar.bz2|*.tbz2) tar xvjf $1;;
-			*.tar.gz|*.tgz) tar xvzf $1;;
-			*.tar) tar xvf $1;;
-			*.bz2) bunzip2 $1;;
-			*.zip) unzip $1;;
-			*.rar) unrar x $1;;
-			*.gz) gunzip $1;;
-			*.Z) uncompress $1;;
-			*.7z) 7z x $1;;
-			*) echo "'$1' cannot be extracted via extract()";;
+	if [ -f "$1" ] ; then
+		case "$1" in
+			*.tar.bz2|*.tbz2) tar xvjf "$1";;
+			*.tar.gz|*.tgz) tar xvzf "$1";;
+			*.tar) tar xvf "$1";;
+			*.bz2) bunzip2 "$1";;
+			*.zip) unzip "$1";;
+			*.rar) unrar x "$1";;
+			*.gz) gunzip "$1";;
+			*.Z) uncompress "$1";;
+			*.7z) 7z x "$1";;
+			*) echo "'${1}' cannot be extracted via extract()";;
 		esac
 	else
-		echo "'$1' is not a valid file!"
+		echo "'${1}' is not a valid file!"
 	fi
 }
 
@@ -51,7 +51,7 @@ cpv()
 	local FACES=("(o_o)" "(o_-)" "(-_o)" "(-_-)" "¯\_(O_o)_/¯")
 
 	# ensure pv is installed and correct arguments
-	[ "$(command -v pv)" ] || { echo "install pv first"; return 1; }
+	[ -n "$(type pv)" ] || { echo "install pv first"; return 1; }
 	[ $# -lt 2 ] && { echo "too few args"; return 1; }
 	[ "$SRC" == "$DST" ] && { echo "src and dst must be different"; return 1; }
 
@@ -105,15 +105,15 @@ cpv()
 # Display most used commands
 ctop()
 {
-	sed 's/|/\n/g' $HISTFILE | awk '{CMD[$1]++;count++;}END { for (a in CMD)print CMD[a] " " CMD[a]/count*100 "% " a;}' | grep -v "./" | column -c3 -s " " -t | sort -nr | nl |  head -n10
+	sed 's/|/\n/g' "$HISTFILE" | awk '{CMD[$1]++;count++;}END { for (a in CMD)print CMD[a] " " CMD[a]/count*100 "% " a;}' | grep -v "./" | column -c3 -s " " -t | sort -nr | nl |  head -n10
 }
 
 
 # Make directory then cd into it
 mcd()
 {
-	mkdir -p $1
-	cd $1
+	mkdir -p "$1"
+	cd "$1"
 }
 
 

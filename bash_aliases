@@ -3,7 +3,7 @@
 # .bash_aliases
 #-------------------------------------------------------------------------------
 # Add ls aliases
-alias ls='ls -CF --color'
+alias ls='ls -CF --color=always'
 alias la='ls -A'
 alias ll='ls -hlF'
 alias lr='ls -R'
@@ -12,15 +12,15 @@ alias llr='ll -R'
 alias l.='ls -d .*'
 
 # Enable color
-alias dir='dir --color'
-alias vdir='vdir --color'
-alias grep='grep --color'
-alias fgrep='fgrep --color'
-alias egrep='egrep --color'
-alias diff='diff --color'
+alias dir='dir --color=always'
+alias vdir='vdir --color=always'
+alias grep='grep --color=always'
+alias fgrep='fgrep --color=always'
+alias egrep='egrep --color=always'
+alias diff='diff --color=always'
 
 # Prefer colordiff if possible
-if [ $(command -v colordiff) ]; then
+if [ -n "$(type colordiff)" ]; then
 	alias diff='colordiff'
 fi
 
