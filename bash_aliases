@@ -44,7 +44,6 @@ alias cd..='cd ..'
 alias ..='cd ..'
 
 # Shell environment aliases
-alias root='sudo -i'
 alias which='type -a'
 alias h='history'
 alias j='jobs -l'
